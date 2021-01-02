@@ -1,5 +1,5 @@
-'p_cpu': 0.14
-'p_mem': 0.0275
+'p_cpu': 0.00003334
+'p_mem': 0.00001389
 'p_service': 0.3
 'rtt': 0.3
 'per_pod_start_time': 2
