@@ -47,15 +47,18 @@ def decide(loadfromtxt, rpsfromtxt, limitfromtxt, arg):
 
         res_cost = math.ceil(current_num*limit/1000)*arg['interval']*arg['p_cpu']
         print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        print("current index: %d " % loadcount)
         print("load: %d " % load)
         print("pod_num: %d " % current_num)
         print("res_cost: %f " % res_cost)
         print("*" * 30)
-        f = open('pylog.txt', 'a')
+        f = open('adaptive_result.txt', 'a')
         f.write(time.strftime("\n%Y-%m-%d %H:%M:%S\n", time.localtime()))
+        f.write("current index: %d\n" % loadcount)
         f.write("load : %d\n" % load)
         f.write("pod_num : %d\n" % current_num)
-        f.write("*" * 30)
+        f.write("res_cost: %f\n" % res_cost)
+        f.write("*" * 50)
         f.close()
         # execute(current_num,limit,arg)
         # time.sleep(interval)
@@ -98,60 +101,6 @@ def execute(num_pod, limit_pod, arg):
     deployobj.spec.template.spec.containers[0].resources.requests.update(recommend_requests)
     deployobj.spec.replicas = num_pod
     api_instance.replace_namespaced_deployment(deployment, namespace, deployobj)
-
-
-'''
-输入：实时的负载以及RPS
-输出：最少的pod个数，以及该组合式方案的RTT
-描述：利用排队论的优化问题，求解最少需要的pod个数
-     负载load对应排队论中的请求到达率
-     RPS对应排队论中的服务速率
-     RTT对应排队论中的ws逗留时间
-'''
-
-
-def queue(load, rps, rtt):
-    c = 1
-    strength = 1.0 * load / (c * rps)
-    while True:
-        if (strength >= 1):
-            c = c + 1
-            strength = 1.0 * load / (c * rps)
-            continue
-        p0 = 0
-        k = 0
-        while k <= c - 1:
-            p0 += (1.0 / math.factorial(k)) * ((1.0 * load / rps) ** k)
-            k = k + 1
-        p0 += (1.0 / math.factorial(c)) * (1.0 / (1 - strength)) * ((1.0 * load / rps) ** c)
-        p0 = 1 / p0
-        lq = ((c * strength) ** c) * strength / (math.factorial(c) * (1 - strength) * (1 - strength)) * p0
-        ls = lq + load / rps
-        ws = ls / load
-        wq = lq / load
-        if ws < rtt:
-            break
-        else:
-            c = c + 1
-            strength = load / (c * rps)
-    # print("have a look: %f" % ws)
-    return c, float(ws)
-
-    '''
-    print("ws:%f" % ws)
-    print("wq:%f" % wq)
-    print("ls:%f" % ls)
-    print("lq:%f" % lq)
-    print("num of pod:%d" % c)
-
-    x = symbols("x")
-    ws = 0.9
-    para=load
-    print("para=%f" % para)
-    f=para*((math.e)**(-para*x))
-    A = integrate(f,(x,2,100000))
-    print("A=%f" % A )
-    '''
 
 
 def prepare():
@@ -197,7 +146,7 @@ def main():
     loadfromtxt, rpsfromtxt, limitfromtxt = prepare()
     decide(loadfromtxt, rpsfromtxt, limitfromtxt, arg)
 
-    f = open('pylog.txt', 'a')
+    f = open('adaptive_result.txt', 'a')
     f.write("\nend of the test\n\n\n")
     f.close()
 
